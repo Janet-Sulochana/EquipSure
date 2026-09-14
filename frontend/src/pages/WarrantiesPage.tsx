@@ -16,12 +16,15 @@ import { Warranty, Equipment } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const WarrantiesPage: React.FC = () => {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [warranties, setWarranties] = useState<Warranty[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [contractTypeFilter, setContractTypeFilter] = useState<string>('');
 
@@ -59,6 +62,7 @@ export const WarrantiesPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to fetch warranties:', err);
+      showToast('error', 'Error', 'Failed to retrieve warranty records.');
     } finally {
       setLoading(false);
     }
@@ -75,12 +79,16 @@ export const WarrantiesPage: React.FC = () => {
 
   const handleCreateWarranty = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/warranties', formData);
+      showToast('success', 'Warranty Saved', 'Warranty contract details have been successfully recorded.');
       setModalOpen(false);
       fetchWarranties();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error saving warranty contract');
+      showToast('error', 'Registration Failed', err.response?.data?.message || 'Error saving warranty contract');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -340,9 +348,17 @@ export const WarrantiesPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition disabled:opacity-60 flex items-center gap-1.5"
             >
-              Save Warranty Contract
+              {submitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </>
+              ) : (
+                'Save Warranty Contract'
+              )}
             </button>
           </div>
         </form>

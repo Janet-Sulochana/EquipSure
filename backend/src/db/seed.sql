@@ -1,14 +1,27 @@
 -- EquipSure Realistic Seed Data for Hospitals
 -- Biomedical Equipment, Schedules, Calibrations, Warranties, Service Requests, Utilization
 
--- Demo Users (Password: 'Password123!' hashed with bcrypt 10 rounds: $2a$10$7Zk7G1r7s79q4k1/q5Qf7.20d9Wb8m7Z3o6UvBvJ0H7u5u2R7i9yG or bcryptjs hash)
--- We will insert standard bcrypt hash for 'Password123!' -> $2b$10$EpRnTzVlqHNP0.fUbXUwSOyuiXe/QLSUG6x8ecJmGWD9WZg66Tehm
+-- Hospital Departments
+INSERT INTO departments (id, name, code, floor_building, head_of_department, contact_phone) VALUES
+(1, 'Diagnostic Radiology & Imaging', 'RAD', 'Tower A, Ground Floor', 'Dr. Evelyn Reed, MD', '+1-555-0201'),
+(2, 'Intensive Care Unit (ICU)', 'ICU', 'Building B, 2nd Floor', 'Dr. Michael Chen, MD', '+1-555-0202'),
+(3, 'Emergency Medicine & Trauma', 'EMG', 'Main Hospital, East Wing', 'Dr. Robert Vance, MD', '+1-555-0203'),
+(4, 'Cardiology & Cath Lab', 'CARD', 'Tower A, 3rd Floor', 'Dr. Sarah Al-Mansoor, MD', '+1-555-0204'),
+(5, 'Surgical Services (OR)', 'SURG', 'Surgical Pavilion, 4th Floor', 'Dr. William Halsted, MD', '+1-555-0205'),
+(6, 'Nephrology & Dialysis', 'DIA', 'Building C, 1st Floor', 'Dr. Anita Desai, MD', '+1-555-0206'),
+(7, 'Clinical Pathology & Laboratory', 'PATH', 'Central Lab Annex, 2nd Floor', 'Dr. Gregory House, MD', '+1-555-0207'),
+(8, 'Neonatal Intensive Care (NICU)', 'NICU', 'Maternal Health Wing, 3rd Floor', 'Dr. Clara Barton, MD', '+1-555-0208'),
+(9, 'Central Sterile Supply Dept (CSSD)', 'CSSD', 'Sub-Basement Service Level', 'James Sterling, CRCST', '+1-555-0209')
+ON CONFLICT (id) DO NOTHING;
 
+SELECT setval('departments_id_seq', (SELECT MAX(id) FROM departments));
+
+-- Demo Users (Password: 'Password123!' hashed with bcrypt 10 rounds)
 INSERT INTO users (id, name, email, password_hash, role, department, phone) VALUES
 (1, 'Dr. Eleanor Vance', 'admin@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'admin', 'Biomedical Administration', '+1-555-0190'),
 (2, 'Marcus Reynolds, CBET', 'bme@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'biomedical_engineer', 'Clinical Engineering', '+1-555-0191'),
-(3, 'Nurse Sarah Jenkins, RN', 'staff@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'hospital_staff', 'Intensive Care Unit', '+1-555-0192'),
-(4, 'Dr. Arjun Patel, MD', 'doctor@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'hospital_staff', 'Radiology & Imaging', '+1-555-0193')
+(3, 'Nurse Sarah Jenkins, RN', 'staff@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'hospital_staff', 'Intensive Care Unit (ICU)', '+1-555-0192'),
+(4, 'Dr. Arjun Patel, MD', 'doctor@equipsure.com', '$2a$10$F.fD.RM.Qp9OOj4tiGdCKuqtqrhobQfd9fqoYYYVqgWgKOeF3UJuy', 'hospital_staff', 'Diagnostic Radiology & Imaging', '+1-555-0193')
 ON CONFLICT (id) DO NOTHING;
 
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));

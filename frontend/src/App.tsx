@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ToastProvider } from './context/ToastContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import NotificationDrawer from './components/NotificationDrawer';
@@ -12,6 +13,7 @@ import WarrantiesPage from './pages/WarrantiesPage';
 import ServiceRequestsPage from './pages/ServiceRequestsPage';
 import UtilizationPage from './pages/UtilizationPage';
 import ReportsPage from './pages/ReportsPage';
+import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 
 const MainLayout: React.FC = () => {
@@ -51,6 +53,8 @@ const MainLayout: React.FC = () => {
         return <UtilizationPage />;
       case 'reports':
         return <ReportsPage />;
+      case 'users':
+        return <UsersPage />;
       default:
         return <DashboardPage onNavigate={setActiveTab} />;
     }
@@ -74,7 +78,9 @@ export const App: React.FC = () => {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <MainLayout />
+        <ToastProvider>
+          <MainLayout />
+        </ToastProvider>
       </NotificationProvider>
     </AuthProvider>
   );

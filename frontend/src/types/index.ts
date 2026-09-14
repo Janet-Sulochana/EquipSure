@@ -7,6 +7,18 @@ export interface User {
   role: UserRole;
   department: string;
   phone?: string;
+  created_at?: string;
+}
+
+export interface Department {
+  id: number;
+  name: string;
+  code: string;
+  floor_building: string;
+  head_of_department?: string;
+  contact_phone?: string;
+  total_equipment?: number;
+  operational_equipment?: number;
 }
 
 export type EquipmentStatus = 'operational' | 'under_maintenance' | 'under_repair' | 'needs_calibration' | 'decommissioned';

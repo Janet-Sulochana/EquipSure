@@ -13,18 +13,23 @@ import {
   Filter,
 } from 'lucide-react';
 import api from '../api/client';
-import { MaintenanceSchedule, Equipment } from '../types';
+import { MaintenanceSchedule, Equipment, Department } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const MaintenancePage: React.FC = () => {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [schedules, setSchedules] = useState<MaintenanceSchedule[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [timeframeFilter, setTimeframeFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
 
   // Complete maintenance modal state
   const [completeModalOpen, setCompleteModalOpen] = useState<boolean>(false);
@@ -42,16 +47,18 @@ export const MaintenancePage: React.FC = () => {
     next_maintenance_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
     checklist: [
-      { task: 'Visual and mechanical inspection', done: false },
-      { task: 'Electrical safety and ground leakage test', done: false },
-      { task: 'Operational functional check and self-diagnostics', done: false },
+      { task: 'Visual & chassis electrical safety check (IEC 62353)', done: false },
+      { task: 'Clean dust & inspect cooling airflow pathways', done: false },
+      { task: 'Run manufacturer self-diagnostic test protocol', done: false },
+      { task: 'Verify sensor calibration and power supply voltages', done: false },
     ],
   });
 
   useEffect(() => {
     fetchSchedules();
     fetchEquipment();
-  }, [statusFilter, timeframeFilter]);
+    fetchDepartments();
+  }, [statusFilter, timeframeFilter, departmentFilter]);
 
   const fetchSchedules = async () => {
     setLoading(true);
@@ -59,6 +66,7 @@ export const MaintenancePage: React.FC = () => {
       const params: any = {};
       if (statusFilter) params.status = statusFilter;
       if (timeframeFilter) params.timeframe = timeframeFilter;
+      if (departmentFilter) params.department = departmentFilter;
 
       const res = await api.get('/maintenance', { params });
       if (res.data.success) {
@@ -80,17 +88,26 @@ export const MaintenancePage: React.FC = () => {
     } catch (err) {}
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get('/departments');
+      if (res.data.success) {
+        setDepartments(res.data.data);
+      }
+    } catch (err) {}
+  };
+
   const handleOpenComplete = (item: MaintenanceSchedule) => {
     setActiveSchedule(item);
     const existingChecklist = Array.isArray(item.checklist) && item.checklist.length > 0
       ? item.checklist
       : [
-          { task: 'Clean intake air filters & inspect cables', done: true },
-          { task: 'Verify sensor calibration and power supply voltages', done: true },
+          { task: 'Clean intake air filters & inspect power cables', done: true },
+          { task: 'Verify sensor calibration and battery backup supply', done: true },
           { task: 'Perform electrical safety check according to IEC 62353', done: true },
         ];
     setCompletionChecklist(existingChecklist);
-    setCompletionNotes(item.notes || 'Preventive maintenance performed per hospital safety SOP. Operational parameters verified.');
+    setCompletionNotes(item.notes || 'Preventive inspection completed per hospital safety protocol. Operational readiness certified.');
 
     // Precalculate next maintenance date based on frequency
     const nextDate = new Date();
@@ -106,6 +123,7 @@ export const MaintenancePage: React.FC = () => {
   const handleSubmitComplete = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeSchedule) return;
+    setSubmitting(true);
 
     try {
       await api.put(`/maintenance/${activeSchedule.id}/complete`, {
@@ -113,21 +131,28 @@ export const MaintenancePage: React.FC = () => {
         notes: completionNotes,
         next_date: nextMaintenanceDate,
       });
+      showToast(`PPM for ${activeSchedule.equipment_name} completed! Next due: ${nextMaintenanceDate}`, 'success');
       setCompleteModalOpen(false);
       fetchSchedules();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error completing maintenance');
+      showToast(err.response?.data?.message || 'Error completing maintenance task', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleCreateSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/maintenance', newSchedule);
+      showToast(`Preventive maintenance schedule "${newSchedule.title}" registered in database!`, 'success');
       setCreateModalOpen(false);
       fetchSchedules();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating maintenance schedule');
+      showToast(err.response?.data?.message || 'Error creating maintenance schedule', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -163,6 +188,17 @@ export const MaintenancePage: React.FC = () => {
             <option value="upcoming_30">Due in Next 30 Days</option>
             <option value="overdue">Overdue Tasks</option>
           </select>
+
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-none focus:border-teal-500"
+          >
+            <option value="">All Departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
         </div>
 
         {hasRole(['admin', 'biomedical_engineer']) && (
@@ -195,7 +231,7 @@ export const MaintenancePage: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-10 text-slate-400">
-                    Loading maintenance schedules...
+                    Loading maintenance schedules from database...
                   </td>
                 </tr>
               ) : schedules.length === 0 ? (
@@ -326,10 +362,11 @@ export const MaintenancePage: React.FC = () => {
               </button>
               <button
                 type="submit"
+                disabled={submitting}
                 className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition flex items-center gap-1.5"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                Verify & Mark Completed
+                {submitting ? 'Updating Database...' : 'Verify & Mark Completed'}
               </button>
             </div>
           </form>
@@ -422,9 +459,10 @@ export const MaintenancePage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition flex items-center gap-1.5"
             >
-              Schedule Maintenance
+              {submitting ? 'Saving to Database...' : 'Schedule Maintenance'}
             </button>
           </div>
         </form>

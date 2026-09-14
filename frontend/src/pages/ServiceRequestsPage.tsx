@@ -16,13 +16,17 @@ import { ServiceRequest, Equipment, User as UserType } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const ServiceRequestsPage: React.FC = () => {
   const { user, hasRole } = useAuth();
+  const { showToast } = useToast();
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [engineers, setEngineers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submittingReport, setSubmittingReport] = useState<boolean>(false);
+  const [submittingResolve, setSubmittingResolve] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
 
@@ -65,6 +69,7 @@ export const ServiceRequestsPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to fetch service requests:', err);
+      showToast('error', 'Error', 'Failed to retrieve breakdown requests.');
     } finally {
       setLoading(false);
     }
@@ -90,13 +95,17 @@ export const ServiceRequestsPage: React.FC = () => {
 
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmittingReport(true);
     try {
       await api.post('/service-requests', reportForm);
+      showToast('success', 'Breakdown Dispatched', 'Biomedical engineering staff has been alerted.');
       setReportModalOpen(false);
       setReportForm({ equipment_id: '', priority: 'high', issue_description: '' });
       fetchRequests();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error creating breakdown report');
+      showToast('error', 'Submission Failed', err.response?.data?.message || 'Error creating breakdown report');
+    } finally {
+      setSubmittingReport(false);
     }
   };
 
@@ -117,6 +126,7 @@ export const ServiceRequestsPage: React.FC = () => {
     e.preventDefault();
     if (!activeTicket) return;
 
+    setSubmittingResolve(true);
     try {
       await api.put(`/service-requests/${activeTicket.id}`, {
         ...resolveForm,
@@ -124,10 +134,13 @@ export const ServiceRequestsPage: React.FC = () => {
         downtime_hours: parseFloat(resolveForm.downtime_hours) || 0,
         assigned_to: resolveForm.assigned_to ? parseInt(resolveForm.assigned_to, 10) : null,
       });
+      showToast('success', 'Ticket Updated', `Work order ${activeTicket.ticket_number} has been updated.`);
       setResolveModalOpen(false);
       fetchRequests();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error updating service request');
+      showToast('error', 'Update Failed', err.response?.data?.message || 'Error updating service request');
+    } finally {
+      setSubmittingResolve(false);
     }
   };
 
@@ -322,10 +335,20 @@ export const ServiceRequestsPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl font-bold bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/20 transition flex items-center gap-1.5"
+              disabled={submittingReport}
+              className="px-5 py-2 rounded-xl font-bold bg-rose-500 hover:bg-rose-600 text-white shadow-md shadow-rose-500/20 transition disabled:opacity-60 flex items-center gap-1.5"
             >
-              <AlertOctagon className="w-4 h-4" />
-              Dispatch Service Ticket
+              {submittingReport ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Dispatching...</span>
+                </>
+              ) : (
+                <>
+                  <AlertOctagon className="w-4 h-4" />
+                  <span>Dispatch Service Ticket</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -427,10 +450,20 @@ export const ServiceRequestsPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition flex items-center gap-1.5"
+                disabled={submittingResolve}
+                className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition disabled:opacity-60 flex items-center gap-1.5"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                Update Ticket
+                {submittingResolve ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Update Ticket</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

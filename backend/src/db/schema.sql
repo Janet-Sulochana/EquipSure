@@ -1,6 +1,16 @@
 -- EquipSure Database Schema
 -- Biomedical Equipment Management System (PERN Stack)
 
+CREATE TABLE IF NOT EXISTS departments (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    code VARCHAR(20) UNIQUE NOT NULL,
+    floor_building VARCHAR(100) NOT NULL,
+    head_of_department VARCHAR(100),
+    contact_phone VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,

@@ -7,13 +7,15 @@ import { AuthenticatedRequest } from '../middleware/auth.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'equipsure_super_secret_jwt_key_2026_healthcare_security';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({
       success: false,
-      message: 'Email and password are required.',
+      message: 'Clinical email and password are required.',
     });
   }
 
@@ -26,7 +28,7 @@ export async function login(req: Request, res: Response) {
     if (result.rows.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Invalid credentials. Please verify your hospital email and password.',
       });
     }
 
@@ -36,7 +38,7 @@ export async function login(req: Request, res: Response) {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password.',
+        message: 'Invalid credentials. Please verify your hospital email and password.',
       });
     }
 
@@ -52,7 +54,7 @@ export async function login(req: Request, res: Response) {
 
     return res.json({
       success: true,
-      message: 'Login successful',
+      message: 'Authentication successful',
       token,
       user: {
         id: user.id,
@@ -73,29 +75,38 @@ export async function login(req: Request, res: Response) {
 }
 
 export async function register(req: Request, res: Response) {
-  const { name, email, password, role, department, phone } = req.body;
+  const { name, email, password, role = 'hospital_staff', department, phone } = req.body;
 
-  if (!name || !email || !password || !role || !department) {
+  if (!name || !email || !password || !department) {
     return res.status(400).json({
       success: false,
-      message: 'Name, email, password, role, and department are required.',
+      message: 'Full Name, Email, Password, and Department are required.',
+    });
+  }
+
+  if (!EMAIL_REGEX.test(email.trim())) {
+    return res.status(400).json({
+      success: false,
+      message: 'Please provide a valid institutional email address.',
+    });
+  }
+
+  if (password.length < 8) {
+    return res.status(400).json({
+      success: false,
+      message: 'Hospital security policy requires a password of at least 8 characters.',
     });
   }
 
   const validRoles = ['admin', 'biomedical_engineer', 'hospital_staff'];
-  if (!validRoles.includes(role)) {
-    return res.status(400).json({
-      success: false,
-      message: `Role must be one of: ${validRoles.join(', ')}`,
-    });
-  }
+  const userRole = validRoles.includes(role) ? role : 'hospital_staff';
 
   try {
     const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [email.trim()]);
     if (existing.rows.length > 0) {
       return res.status(409).json({
         success: false,
-        message: 'An account with this email address already exists.',
+        message: 'A hospital account with this email address already exists.',
       });
     }
 
@@ -106,20 +117,35 @@ export async function register(req: Request, res: Response) {
       `INSERT INTO users (name, email, password_hash, role, department, phone)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, name, email, role, department, phone, created_at`,
-      [name, email.trim().toLowerCase(), password_hash, role, department, phone || null]
+      [name.trim(), email.trim().toLowerCase(), password_hash, userRole, department.trim(), phone ? phone.trim() : null]
     );
 
     const newUser = result.rows[0];
+
+    // Generate token so new registrant can immediately proceed
+    const token = jwt.sign(
+      {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department,
+      },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN as any }
+    );
+
     return res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'Staff account registered successfully',
+      token,
       user: newUser,
     });
   } catch (error: any) {
     console.error('[Auth] Register error:', error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error during registration.',
+      message: 'Internal server error during account creation.',
     });
   }
 }
@@ -150,20 +176,91 @@ export async function getMe(req: AuthenticatedRequest, res: Response) {
 
 export async function getUsers(req: Request, res: Response) {
   try {
-    const { role } = req.query;
-    let query = 'SELECT id, name, email, role, department, phone FROM users';
+    const { role, department, search } = req.query;
+    let query = 'SELECT id, name, email, role, department, phone, created_at FROM users WHERE 1=1';
     const params: any[] = [];
+    let pIndex = 1;
 
     if (role) {
-      query += ' WHERE role = $1';
+      query += ` AND role = $${pIndex}`;
       params.push(role);
+      pIndex++;
     }
-    query += ' ORDER BY name ASC';
+
+    if (department) {
+      query += ` AND department = $${pIndex}`;
+      params.push(department);
+      pIndex++;
+    }
+
+    if (search) {
+      query += ` AND (name ILIKE $${pIndex} OR email ILIKE $${pIndex} OR department ILIKE $${pIndex})`;
+      params.push(`%${search}%`);
+      pIndex++;
+    }
+
+    query += ' ORDER BY id ASC';
 
     const result = await pool.query(query, params);
     return res.json({
       success: true,
       users: result.rows,
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+export async function updateUser(req: AuthenticatedRequest, res: Response) {
+  const { id } = req.params;
+  const { name, role, department, phone } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE users SET
+        name = COALESCE($1, name),
+        role = COALESCE($2, role),
+        department = COALESCE($3, department),
+        phone = COALESCE($4, phone),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $5
+      RETURNING id, name, email, role, department, phone, updated_at`,
+      [name, role, department, phone, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      message: 'User profile updated successfully',
+      user: result.rows[0],
+    });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+export async function deleteUser(req: AuthenticatedRequest, res: Response) {
+  const { id } = req.params;
+
+  if (req.user && String(req.user.id) === String(id)) {
+    return res.status(400).json({
+      success: false,
+      message: 'You cannot delete your own administrative account.',
+    });
+  }
+
+  try {
+    const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, name', [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    return res.json({
+      success: true,
+      message: `Staff member "${result.rows[0].name}" removed from registry.`,
     });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

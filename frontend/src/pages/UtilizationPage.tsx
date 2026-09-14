@@ -14,13 +14,16 @@ import api from '../api/client';
 import { UtilizationLog, Equipment } from '../types';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const UtilizationPage: React.FC = () => {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [logs, setLogs] = useState<UtilizationLog[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Log usage modal
   const [logModalOpen, setLogModalOpen] = useState<boolean>(false);
@@ -49,6 +52,7 @@ export const UtilizationPage: React.FC = () => {
       if (analyticsRes.data.success) setAnalytics(analyticsRes.data.analytics);
     } catch (err) {
       console.error('Failed to fetch utilization:', err);
+      showToast('error', 'Error', 'Failed to retrieve utilization data.');
     } finally {
       setLoading(false);
     }
@@ -65,6 +69,7 @@ export const UtilizationPage: React.FC = () => {
 
   const handleLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/utilization', {
         ...logForm,
@@ -72,10 +77,13 @@ export const UtilizationPage: React.FC = () => {
         idle_hours: parseFloat(logForm.idle_hours),
         patients_served: parseInt(logForm.patients_served, 10) || 0,
       });
+      showToast('success', 'Duty Logged', 'Equipment daily duty cycle logged successfully.');
       setLogModalOpen(false);
       fetchUtilizationData();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error logging equipment utilization');
+      showToast('error', 'Logging Failed', err.response?.data?.message || 'Error logging equipment utilization');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -359,9 +367,17 @@ export const UtilizationPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition disabled:opacity-60 flex items-center gap-1.5"
             >
-              Record Usage Log
+              {submitting ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Recording...</span>
+                </>
+              ) : (
+                'Record Usage Log'
+              )}
             </button>
           </div>
         </form>

@@ -15,17 +15,27 @@ import {
   Wrench,
   CheckCircle,
   FileText,
+  AlertOctagon,
+  Gauge,
 } from 'lucide-react';
 import api from '../api/client';
-import { Equipment } from '../types';
+import { Equipment, Department } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
-export const EquipmentPage: React.FC = () => {
+interface EquipmentPageProps {
+  onNavigate?: (tab: string) => void;
+}
+
+export const EquipmentPage: React.FC<EquipmentPageProps> = ({ onNavigate }) => {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [search, setSearch] = useState<string>('');
   const [department, setDepartment] = useState<string>('');
   const [category, setCategory] = useState<string>('');
@@ -44,7 +54,7 @@ export const EquipmentPage: React.FC = () => {
     manufacturer: '',
     model: '',
     serial_number: '',
-    department: 'Radiology',
+    department: '',
     location_room: '',
     purchase_date: new Date().toISOString().split('T')[0],
     purchase_cost: '',
@@ -56,6 +66,7 @@ export const EquipmentPage: React.FC = () => {
 
   useEffect(() => {
     fetchEquipment();
+    fetchDepartments();
   }, [department, category, status]);
 
   const fetchEquipment = async () => {
@@ -78,6 +89,15 @@ export const EquipmentPage: React.FC = () => {
     }
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get('/departments');
+      if (res.data.success) {
+        setDepartments(res.data.data);
+      }
+    } catch (err) {}
+  };
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchEquipment();
@@ -92,7 +112,7 @@ export const EquipmentPage: React.FC = () => {
         setDetailModalOpen(true);
       }
     } catch (err) {
-      console.error('Failed to load equipment details:', err);
+      showToast('Failed to load device lifecycle details', 'error');
     }
   };
 
@@ -105,7 +125,7 @@ export const EquipmentPage: React.FC = () => {
       manufacturer: '',
       model: '',
       serial_number: `SN-${Date.now().toString().slice(-6)}`,
-      department: 'Radiology',
+      department: departments[0]?.name || 'Diagnostic Radiology & Imaging',
       location_room: '',
       purchase_date: new Date().toISOString().split('T')[0],
       purchase_cost: '',
@@ -140,31 +160,36 @@ export const EquipmentPage: React.FC = () => {
 
   const handleSaveEquipment = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       if (editingItem) {
         await api.put(`/equipment/${editingItem.id}`, formData);
+        showToast(`Equipment ${formData.name} updated successfully!`, 'success');
       } else {
         await api.post('/equipment', formData);
+        showToast(`Equipment ${formData.name} registered into hospital database!`, 'success');
       }
       setIsFormOpen(false);
       fetchEquipment();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error saving equipment');
+      showToast(err.response?.data?.message || 'Error saving equipment record', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDeleteEquipment = async (id: number, name: string) => {
-    if (!confirm(`Are you sure you want to delete equipment "${name}"? This action cannot be undone.`)) return;
+    if (!confirm(`Are you sure you want to delete biomedical asset "${name}"? This action permanently removes all linked telemetry.`)) return;
     try {
       await api.delete(`/equipment/${id}`);
+      showToast(`Device "${name}" deleted from hospital database.`, 'info');
       fetchEquipment();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error deleting equipment');
+      showToast(err.response?.data?.message || 'Error deleting equipment', 'error');
     }
   };
 
   const categories = ['Diagnostic Imaging', 'Life Support', 'Patient Monitoring', 'Surgical', 'Therapeutic', 'Laboratory'];
-  const departmentsList = ['Radiology', 'ICU', 'Emergency', 'Cardiology', 'Surgery', 'Dialysis', 'Pathology', 'Pediatrics', 'CSSD'];
   const statuses = [
     { label: 'Operational', val: 'operational' },
     { label: 'Under Maintenance', val: 'under_maintenance' },
@@ -196,14 +221,14 @@ export const EquipmentPage: React.FC = () => {
         </form>
 
         <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
-          {/* Department Filter */}
+          {/* Department Filter (Dynamic from PostgreSQL) */}
           <select
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
             className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-none focus:border-teal-500"
           >
             <option value="">All Departments</option>
-            {departmentsList.map(d => <option key={d} value={d}>{d}</option>)}
+            {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
           </select>
 
           {/* Category Filter */}
@@ -232,7 +257,7 @@ export const EquipmentPage: React.FC = () => {
               onClick={handleOpenCreate}
               className="bg-teal-500 hover:bg-teal-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-md shadow-teal-500/20 flex items-center gap-1.5 transition ml-auto"
             >
-              <Plus className="w-4 h-4" /> Add Device
+              <Plus className="w-4 h-4" /> Add Medical Device
             </button>
           )}
         </div>
@@ -258,7 +283,7 @@ export const EquipmentPage: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="text-center py-10 text-slate-400 font-medium">
-                    Loading equipment registry...
+                    Loading clinical equipment registry...
                   </td>
                 </tr>
               ) : equipmentList.length === 0 ? (
@@ -307,7 +332,7 @@ export const EquipmentPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           onClick={() => handleViewDetails(item.id)}
-                          title="View 360° Details"
+                          title="View 360° Lifecycle Record"
                           className="p-1.5 rounded-lg text-slate-500 hover:text-teal-600 hover:bg-teal-50 transition"
                         >
                           <Eye className="w-4 h-4" />
@@ -315,7 +340,7 @@ export const EquipmentPage: React.FC = () => {
                         {hasRole(['admin', 'biomedical_engineer']) && (
                           <button
                             onClick={() => handleOpenEdit(item)}
-                            title="Edit Equipment"
+                            title="Edit Equipment Record"
                             className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition"
                           >
                             <Edit2 className="w-4 h-4" />
@@ -324,7 +349,7 @@ export const EquipmentPage: React.FC = () => {
                         {hasRole(['admin']) && (
                           <button
                             onClick={() => handleDeleteEquipment(item.id, item.name)}
-                            title="Delete Equipment"
+                            title="Delete Equipment Record"
                             className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -345,7 +370,7 @@ export const EquipmentPage: React.FC = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         title={editingItem ? `Edit Equipment: ${editingItem.equipment_code}` : 'Register New Biomedical Equipment'}
-        subtitle="Ensure manufacturer serial numbers and purchase details match clinical documentation."
+        subtitle="Fields correspond to official hospital capital asset documentation."
         maxWidth="2xl"
       >
         <form onSubmit={handleSaveEquipment} className="space-y-4">
@@ -357,7 +382,7 @@ export const EquipmentPage: React.FC = () => {
                 required
                 value={formData.equipment_code}
                 onChange={(e) => setFormData({ ...formData, equipment_code: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 font-mono"
               />
             </div>
             <div>
@@ -409,7 +434,7 @@ export const EquipmentPage: React.FC = () => {
                 required
                 value={formData.serial_number}
                 onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 font-mono"
               />
             </div>
             <div>
@@ -419,7 +444,7 @@ export const EquipmentPage: React.FC = () => {
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
               >
-                {departmentsList.map(d => <option key={d} value={d}>{d}</option>)}
+                {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
               </select>
             </div>
             <div>
@@ -430,7 +455,7 @@ export const EquipmentPage: React.FC = () => {
                 value={formData.location_room}
                 onChange={(e) => setFormData({ ...formData, location_room: e.target.value })}
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
-                placeholder="e.g. MRI Suite 1"
+                placeholder="e.g. Room 104, Bay 2"
               />
             </div>
             <div>
@@ -440,7 +465,7 @@ export const EquipmentPage: React.FC = () => {
                 required
                 value={formData.purchase_date}
                 onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 font-mono"
               />
             </div>
             <div>
@@ -460,7 +485,7 @@ export const EquipmentPage: React.FC = () => {
                 required
                 value={formData.warranty_expiry}
                 onChange={(e) => setFormData({ ...formData, warranty_expiry: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 font-mono"
               />
             </div>
             <div>
@@ -482,7 +507,7 @@ export const EquipmentPage: React.FC = () => {
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
-              placeholder="Clinical usage instructions, biological shielding or cooling requirements..."
+              placeholder="Clinical usage guidelines, biological shielding or cooling parameters..."
             />
           </div>
 
@@ -496,9 +521,10 @@ export const EquipmentPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl text-xs font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition flex items-center gap-1.5"
             >
-              {editingItem ? 'Update Device' : 'Register Device'}
+              {submitting ? 'Saving to Database...' : editingItem ? 'Update Device Record' : 'Register Device'}
             </button>
           </div>
         </form>
@@ -514,13 +540,38 @@ export const EquipmentPage: React.FC = () => {
           maxWidth="4xl"
         >
           <div className="space-y-5">
-            {/* Header Badge Strip */}
-            <div className="flex flex-wrap items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <StatusBadge status={selectedEquipment.status} />
-              <StatusBadge status={selectedEquipment.criticality} type="criticality" />
-              <span className="text-xs text-slate-600 font-semibold">Department: <strong className="text-slate-900">{selectedEquipment.department}</strong></span>
-              <span className="text-xs text-slate-600 font-semibold">Location: <strong className="text-slate-900">{selectedEquipment.location_room}</strong></span>
-              <span className="text-xs text-slate-600 font-semibold">Serial: <strong className="font-mono text-slate-900">{selectedEquipment.serial_number}</strong></span>
+            {/* Header Badge Strip & Quick Actions */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <StatusBadge status={selectedEquipment.status} />
+                <StatusBadge status={selectedEquipment.criticality} type="criticality" />
+                <span className="text-xs text-slate-600 font-semibold">Dept: <strong className="text-slate-900">{selectedEquipment.department}</strong></span>
+                <span className="text-xs text-slate-600 font-semibold">Location: <strong className="text-slate-900">{selectedEquipment.location_room}</strong></span>
+                <span className="text-xs text-slate-600 font-semibold">Serial: <strong className="font-mono text-slate-900">{selectedEquipment.serial_number}</strong></span>
+              </div>
+
+              {onNavigate && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      onNavigate('service-requests');
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 font-bold text-[11px] flex items-center gap-1 transition"
+                  >
+                    <AlertOctagon className="w-3.5 h-3.5" /> Report Malfunction
+                  </button>
+                  <button
+                    onClick={() => {
+                      setDetailModalOpen(false);
+                      onNavigate('maintenance');
+                    }}
+                    className="px-2.5 py-1.5 rounded-lg bg-teal-50 text-teal-700 hover:bg-teal-100 font-bold text-[11px] flex items-center gap-1 transition"
+                  >
+                    <Wrench className="w-3.5 h-3.5" /> PPM Schedules
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Navigation Tabs */}
@@ -533,7 +584,7 @@ export const EquipmentPage: React.FC = () => {
                     : 'border-transparent text-slate-500 hover:text-slate-900'
                 }`}
               >
-                Overview & Specs
+                Specifications
               </button>
               <button
                 onClick={() => setActiveDetailTab('maintenance')}

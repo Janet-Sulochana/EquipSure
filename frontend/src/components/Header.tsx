@@ -45,6 +45,8 @@ export const Header: React.FC<HeaderProps> = ({ activeTab }) => {
         return { title: 'Asset Utilization Tracking', sub: 'Operating load, patient volume & duty-cycle analytics' };
       case 'reports':
         return { title: 'Compliance Reports & Analytics', sub: 'Audit-ready summaries, department metrics & CSV export' };
+      case 'users':
+        return { title: 'Hospital Staff Directory & Access Control', sub: 'Clinical personnel, biomedical engineers, and system roles' };
       default:
         return { title: 'Biomedical System', sub: 'St. Jude Memorial Hospital' };
     }

@@ -10,17 +10,22 @@ import {
   Building,
 } from 'lucide-react';
 import api from '../api/client';
-import { Calibration, Equipment } from '../types';
+import { Calibration, Equipment, Department } from '../types';
 import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 export const CalibrationsPage: React.FC = () => {
   const { hasRole } = useAuth();
+  const { showToast } = useToast();
   const [calibrations, setCalibrations] = useState<Calibration[]>([]);
   const [equipmentList, setEquipmentList] = useState<Equipment[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [submitting, setSubmitting] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
 
   // Record Calibration Modal
   const [modalOpen, setModalOpen] = useState<boolean>(false);
@@ -39,13 +44,15 @@ export const CalibrationsPage: React.FC = () => {
   useEffect(() => {
     fetchCalibrations();
     fetchEquipment();
-  }, [statusFilter]);
+    fetchDepartments();
+  }, [statusFilter, departmentFilter]);
 
   const fetchCalibrations = async () => {
     setLoading(true);
     try {
       const params: any = {};
       if (statusFilter) params.status = statusFilter;
+      if (departmentFilter) params.department = departmentFilter;
       const res = await api.get('/calibrations', { params });
       if (res.data.success) {
         setCalibrations(res.data.data);
@@ -66,14 +73,27 @@ export const CalibrationsPage: React.FC = () => {
     } catch (err) {}
   };
 
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get('/departments');
+      if (res.data.success) {
+        setDepartments(res.data.data);
+      }
+    } catch (err) {}
+  };
+
   const handleCreateCalibration = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitting(true);
     try {
       await api.post('/calibrations', formData);
+      showToast(`Calibration certificate ${formData.certificate_number} recorded in database!`, 'success');
       setModalOpen(false);
       fetchCalibrations();
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Error recording calibration');
+      showToast(err.response?.data?.message || 'Error recording calibration certificate', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -92,6 +112,17 @@ export const CalibrationsPage: React.FC = () => {
             <option value="due_soon">Due Soon (&lt; 30 Days)</option>
             <option value="overdue">Overdue</option>
             <option value="failed">Failed / Quarantined</option>
+          </select>
+
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            className="px-3 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-none focus:border-teal-500"
+          >
+            <option value="">All Departments</option>
+            {departments.map((d) => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
           </select>
         </div>
 
@@ -132,7 +163,7 @@ export const CalibrationsPage: React.FC = () => {
               {loading ? (
                 <tr>
                   <td colSpan={9} className="text-center py-10 text-slate-400">
-                    Loading calibration registry...
+                    Loading calibration registry from database...
                   </td>
                 </tr>
               ) : calibrations.length === 0 ? (
@@ -313,9 +344,10 @@ export const CalibrationsPage: React.FC = () => {
             </button>
             <button
               type="submit"
+              disabled={submitting}
               className="px-5 py-2 rounded-xl font-bold bg-teal-500 hover:bg-teal-600 text-white shadow-md shadow-teal-500/20 transition"
             >
-              Save Calibration Certificate
+              {submitting ? 'Saving to Database...' : 'Save Calibration Certificate'}
             </button>
           </div>
         </form>

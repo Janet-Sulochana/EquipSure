@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { login, register, getMe, getUsers } from '../controllers/authController.js';
+import { login, register, getMe, getUsers, updateUser, deleteUser } from '../controllers/authController.js';
+import { getDepartments, createDepartment } from '../controllers/departmentController.js';
 import { getDashboardStats, getDepartmentDistribution, getRecentActivity, getPriorityAttention } from '../controllers/dashboardController.js';
 import { getEquipmentList, getEquipmentById, createEquipment, updateEquipment, deleteEquipment } from '../controllers/equipmentController.js';
 import { getMaintenanceList, createMaintenance, updateMaintenance, completeMaintenance } from '../controllers/maintenanceController.js';
@@ -36,11 +37,18 @@ router.get('/system/status', async (req: Request, res: Response) => {
   });
 });
 
-// Authentication
+// Authentication & Staff User Directory
 router.post('/auth/login', login);
 router.post('/auth/register', register);
 router.get('/auth/me', authenticateToken, getMe);
 router.get('/users', authenticateToken, getUsers);
+router.post('/users', authenticateToken, requireRole(['admin']), register);
+router.put('/users/:id', authenticateToken, requireRole(['admin']), updateUser);
+router.delete('/users/:id', authenticateToken, requireRole(['admin']), deleteUser);
+
+// Hospital Departments
+router.get('/departments', getDepartments);
+router.post('/departments', authenticateToken, requireRole(['admin']), createDepartment);
 
 // Dashboard
 router.get('/dashboard/stats', getDashboardStats);
