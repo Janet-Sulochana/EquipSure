@@ -302,7 +302,7 @@ export const LoginPage: React.FC = () => {
                     type="text"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
-                    placeholder="+1-555-0210"
+                    placeholder="+91-XXXXXXXXX"
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
                   />
                 </div>
