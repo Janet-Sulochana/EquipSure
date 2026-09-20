@@ -9,7 +9,8 @@ build/
 
 # Environment files
 backend/.env
-backend\.env.example
+backend/.env.*.local
+
 backend/.env.example
 backend/.env.local
 backend/.env.development.local
