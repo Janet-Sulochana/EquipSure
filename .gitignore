@@ -8,11 +8,12 @@ dist/
 build/
 
 # Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+backend/.env
+backend/.env.example
+backend/.env.local
+backend/.env.development.local
+backend/.env.test.local
+backend/.env.production.local
 
 # Logs
 *.log
@@ -37,3 +38,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+#temporary files
+/services
+
