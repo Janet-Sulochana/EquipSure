@@ -41,6 +41,29 @@ Thumbs.db
 *.sln
 *.sw?
 
-#temporary files
-/services
+# Temporary halfway-review MVP exclusions.
+# Restore these entries after the review to bring back the full feature set.
+backend/src/controllers/calibrationController.ts
+backend/src/controllers/maintenanceController.ts
+backend/src/controllers/notificationController.ts
+backend/src/controllers/reportController.ts
+backend/src/controllers/serviceRequestController.ts
+backend/src/controllers/utilizationController.ts
+backend/src/controllers/warrantyController.ts
+backend/src/middleware/cache.ts
+backend/src/services/redisService.ts
+frontend/src/components/Header.tsx
+frontend/src/components/NotificationDrawer.tsx
+frontend/src/context/NotificationContext.tsx
+frontend/src/pages/CalibrationsPage.tsx
+frontend/src/pages/MaintenancePage.tsx
+frontend/src/pages/ReportsPage.tsx
+frontend/src/pages/ServiceRequestsPage.tsx
+frontend/src/pages/UsersPage.tsx
+frontend/src/pages/UtilizationPage.tsx
+frontend/src/pages/WarrantiesPage.tsx
+backend/Dockerfile
+frontend/Dockerfile
+docker-compose.yml
+start-local.sh
 

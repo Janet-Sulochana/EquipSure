@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import pool from '../config/db.js';
-import redisService from '../services/redisService.js';
 
 export async function getEquipmentList(req: Request, res: Response) {
   try {
@@ -208,9 +207,6 @@ export async function createEquipment(req: Request, res: Response) {
       ]
     );
 
-    // Invalidate Redis dashboard cache
-    await redisService.del('dashboard:kpi_stats');
-
     return res.status(201).json({
       success: true,
       message: 'Equipment registered successfully',
@@ -279,9 +275,6 @@ export async function updateEquipment(req: Request, res: Response) {
       ]
     );
 
-    // Invalidate Redis dashboard cache
-    await redisService.del('dashboard:kpi_stats');
-
     return res.json({
       success: true,
       message: 'Equipment updated successfully',
@@ -301,9 +294,6 @@ export async function deleteEquipment(req: Request, res: Response) {
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Equipment not found' });
     }
-
-    // Invalidate Redis dashboard cache
-    await redisService.del('dashboard:kpi_stats');
 
     return res.json({
       success: true,

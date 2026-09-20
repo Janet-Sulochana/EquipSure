@@ -2,17 +2,10 @@ import React from 'react';
 import {
   LayoutDashboard,
   Cpu,
-  Wrench,
-  Gauge,
-  ShieldCheck,
-  AlertCircle,
   Activity,
-  FileBarChart,
-  Users,
   LogOut,
   Building2,
   ChevronRight,
-  ShieldAlert,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
@@ -28,13 +21,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'equipment', label: 'Equipment Inventory', icon: Cpu },
-    { id: 'maintenance', label: 'Preventive Maintenance', icon: Wrench },
-    { id: 'calibrations', label: 'Calibrations', icon: Gauge },
-    { id: 'warranties', label: 'Warranty Tracking', icon: ShieldCheck },
-    { id: 'service-requests', label: 'Service & Repairs', icon: AlertCircle },
-    { id: 'utilization', label: 'Utilization Tracking', icon: Activity },
-    { id: 'reports', label: 'Reports & Analytics', icon: FileBarChart },
-    { id: 'users', label: 'Staff & Personnel', icon: Users },
   ];
 
   const getRoleBadge = (role?: UserRole) => {

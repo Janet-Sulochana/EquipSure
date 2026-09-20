@@ -1,17 +1,8 @@
 import { Request, Response } from 'express';
 import pool from '../config/db.js';
-import redisService from '../services/redisService.js';
 
 export async function getDashboardStats(req: Request, res: Response) {
-  const cacheKey = 'dashboard:kpi_stats';
-
   try {
-    const cachedStats = await redisService.get(cacheKey);
-    if (cachedStats) {
-      res.setHeader('X-Cache', 'HIT');
-      return res.json({ success: true, stats: cachedStats, cached: true });
-    }
-
     // Run parallel aggregation queries
     const [
       totalEquipmentResult,
@@ -80,14 +71,9 @@ export async function getDashboardStats(req: Request, res: Response) {
         : 0,
     };
 
-    // Cache in Redis for 60 seconds
-    await redisService.set(cacheKey, stats, 60);
-
-    res.setHeader('X-Cache', 'MISS');
     return res.json({
       success: true,
       stats,
-      cached: false,
     });
   } catch (error: any) {
     console.error('[Dashboard] Error fetching stats:', error);

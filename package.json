@@ -1,0 +1,21 @@
+{
+  "name": "equipsure",
+  "version": "1.0.0",
+  "description": "**EquipSure** is a hospital-grade Biomedical Equipment Management System (BEMS / CMMS) designed for clinical engineering teams, healthcare administrators, and hospital nursing staff. It centralizes the complete lifecycle of clinical assets—from procurement, preventive maintenance (PPM), and calibration compliance to service contracts, breakdown work orders, and equipment utilization tracking.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Janet-Sulochana/EquipSure.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Janet-Sulochana/EquipSure/issues"
+  },
+  "homepage": "https://github.com/Janet-Sulochana/EquipSure#readme"
+}
