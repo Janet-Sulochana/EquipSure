@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import { ToastProvider } from './context/ToastContext';
 import Sidebar from './components/Sidebar';
+import Header from './components/Header';
+import NotificationDrawer from './components/NotificationDrawer';
 import DashboardPage from './pages/DashboardPage';
 import EquipmentPage from './pages/EquipmentPage';
+import MaintenancePage from './pages/MaintenancePage';
+import CalibrationsPage from './pages/CalibrationsPage';
+import WarrantiesPage from './pages/WarrantiesPage';
+import ServiceRequestsPage from './pages/ServiceRequestsPage';
+import UtilizationPage from './pages/UtilizationPage';
+import ReportsPage from './pages/ReportsPage';
+import UsersPage from './pages/UsersPage';
 import LoginPage from './pages/LoginPage';
 
 const MainLayout: React.FC = () => {
@@ -30,7 +40,21 @@ const MainLayout: React.FC = () => {
       case 'dashboard':
         return <DashboardPage onNavigate={setActiveTab} />;
       case 'equipment':
-        return <EquipmentPage />;
+        return <EquipmentPage onNavigate={setActiveTab} />;
+      case 'maintenance':
+        return <MaintenancePage />;
+      case 'calibrations':
+        return <CalibrationsPage />;
+      case 'warranties':
+        return <WarrantiesPage />;
+      case 'service-requests':
+        return <ServiceRequestsPage />;
+      case 'utilization':
+        return <UtilizationPage />;
+      case 'reports':
+        return <ReportsPage />;
+      case 'users':
+        return <UsersPage />;
       default:
         return <DashboardPage onNavigate={setActiveTab} />;
     }
@@ -40,10 +64,12 @@ const MainLayout: React.FC = () => {
     <div className="flex min-h-screen bg-slate-50">
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 flex flex-col min-w-0">
+        <Header activeTab={activeTab} />
         <main className="flex-1 p-8 max-w-7xl w-full mx-auto">
           {renderActivePage()}
         </main>
       </div>
+      <NotificationDrawer onNavigate={setActiveTab} />
     </div>
   );
 };
@@ -51,9 +77,11 @@ const MainLayout: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <ToastProvider>
-        <MainLayout />
-      </ToastProvider>
+      <NotificationProvider>
+        <ToastProvider>
+          <MainLayout />
+        </ToastProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 };

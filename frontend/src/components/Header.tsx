@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Zap } from 'lucide-react';
+import { Bell, Database, Zap, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import api from '../api/client';
 
 interface HeaderProps {
@@ -9,6 +10,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ activeTab }) => {
   const { user } = useAuth();
+  const { unreadCount, setIsOpen } = useNotifications();
   const [systemHealth, setSystemHealth] = useState<{ db: string; redis: string }>({
     db: 'connected',
     redis: 'active',
@@ -31,6 +33,20 @@ export const Header: React.FC<HeaderProps> = ({ activeTab }) => {
         return { title: 'Executive Healthcare Dashboard', sub: 'Real-time biomedical telemetry & fleet compliance' };
       case 'equipment':
         return { title: 'Biomedical Equipment Inventory', sub: 'Complete device registry, lifecycle & location tracking' };
+      case 'maintenance':
+        return { title: 'Preventive Maintenance (PPM)', sub: 'Inspection schedules, recurrence cycles & safety tasklists' };
+      case 'calibrations':
+        return { title: 'Calibration & Metrology Records', sub: 'Traceable ISO standards, accuracy drift & compliance audits' };
+      case 'warranties':
+        return { title: 'Warranty & Service Contracts', sub: 'OEM, AMC, and CMC contracts with upcoming expiry alerts' };
+      case 'service-requests':
+        return { title: 'Breakdown & Repair History', sub: 'Clinical incident logging, engineer work orders & downtime logs' };
+      case 'utilization':
+        return { title: 'Asset Utilization Tracking', sub: 'Operating load, patient volume & duty-cycle analytics' };
+      case 'reports':
+        return { title: 'Compliance Reports & Analytics', sub: 'Audit-ready summaries, department metrics & CSV export' };
+      case 'users':
+        return { title: 'Hospital Staff Directory & Access Control', sub: 'Clinical personnel, biomedical engineers, and system roles' };
       default:
         return { title: 'Biomedical System', sub: 'St. Jude Memorial Hospital' };
     }
@@ -68,6 +84,20 @@ export const Header: React.FC<HeaderProps> = ({ activeTab }) => {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             </span>
           </div>
+
+          {/* Notifications Bell */}
+          <button
+            onClick={() => setIsOpen(true)}
+            className="relative p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 transition"
+            title="View hospital alerts"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
 
           {/* User Profile Capsule */}
           <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
