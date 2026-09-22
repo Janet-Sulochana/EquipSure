@@ -41,9 +41,7 @@ Thumbs.db
 *.sln
 *.sw?
 
-# Temporary halfway-review MVP exclusions.
-# Restore these entries after the review to bring back the full feature set.
-
+# Local Docker/runtime files intentionally kept out of source control.
 backend/Dockerfile
 frontend/Dockerfile
 docker-compose.yml
