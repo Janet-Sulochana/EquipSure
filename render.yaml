@@ -1,0 +1,54 @@
+services:
+  # 1. EquipSure Backend API Service
+  - type: web
+    name: equipsure-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/system/status
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: equipsure-postgres
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: '*'
+      - key: AUTO_MIGRATE
+        value: 'true'
+
+  # 2. EquipSure Frontend Web Application
+  - type: web
+    name: equipsure-web
+    runtime: static
+    plan: free
+    region: oregon
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: equipsure-api
+          property: host
+
+databases:
+  # 3. EquipSure Managed PostgreSQL Database
+  - name: equipsure-postgres
+    plan: free
+    region: oregon
+    databaseName: equipsuredb
+    user: equipsure

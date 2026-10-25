@@ -8,7 +8,8 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "db:init": "tsx src/db/init.ts",
-    "db:seed": "tsx src/db/seed.ts"
+    "db:seed": "tsx src/db/seed.ts",
+    "db:setup": "tsx src/db/init.ts && tsx src/db/seed.ts"
   },
   "keywords": ["biomedical", "equipment-management", "cmms", "hospital", "pern", "express", "postgresql", "redis"],
   "author": "EquipSure Team",

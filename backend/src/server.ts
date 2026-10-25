@@ -60,6 +60,25 @@ async function bootstrap() {
   const dbOk = await testDbConnection();
   if (!dbOk) {
     console.warn('[Warning] PostgreSQL connection failed at bootstrap. Verify connection parameters.');
+  } else if (process.env.AUTO_MIGRATE === 'true' || process.env.AUTO_INIT_DB === 'true') {
+    try {
+      const { pool } = await import('./config/db.js');
+      const checkTable = await pool.query(
+        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'equipment');"
+      );
+      if (!checkTable.rows[0]?.exists) {
+        console.log('[Auto-Migrate] Blank database detected. Running schema & seed migrations...');
+        const { runSchemaMigration } = await import('./db/init.js');
+        const { runDatabaseSeed } = await import('./db/seed.js');
+        await runSchemaMigration();
+        await runDatabaseSeed();
+        console.log('[Auto-Migrate] Database successfully initialized with tables and demo data.');
+      } else {
+        console.log('[Auto-Migrate] Existing database schema detected. Ready.');
+      }
+    } catch (migrateErr: any) {
+      console.error('[Auto-Migrate Warning] Database auto-migration notice:', migrateErr.message);
+    }
   }
 
   app.listen(PORT, '0.0.0.0', () => {

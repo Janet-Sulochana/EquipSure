@@ -4,7 +4,9 @@
   "description": "**EquipSure** is a hospital-grade Biomedical Equipment Management System (BEMS / CMMS) designed for clinical engineering teams, healthcare administrators, and hospital nursing staff. It centralizes the complete lifecycle of clinical assets—from procurement, preventive maintenance (PPM), and calibration compliance to service contracts, breakdown work orders, and equipment utilization tracking.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "powershell -ExecutionPolicy Bypass -File ./start-local.ps1",
+    "dev": "powershell -ExecutionPolicy Bypass -File ./start-local.ps1",
+    "stop": "powershell -ExecutionPolicy Bypass -Command \"Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'OneDrive\\\\Desktop\\\\EquipSure' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }\""
   },
   "repository": {
     "type": "git",
