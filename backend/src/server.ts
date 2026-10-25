@@ -52,40 +52,54 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Bootstrapping
+async function initDatabaseWithRetry(retries: number = 5, delayMs: number = 3000): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const dbOk = await testDbConnection();
+    if (dbOk) {
+      if (process.env.AUTO_MIGRATE === 'true' || process.env.AUTO_INIT_DB === 'true') {
+        try {
+          const { pool } = await import('./config/db.js');
+          const checkTable = await pool.query(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'equipment');"
+          );
+          if (!checkTable.rows[0]?.exists) {
+            console.log('[Auto-Migrate] Blank database detected. Running schema & seed migrations...');
+            const { runSchemaMigration } = await import('./db/init.js');
+            const { runDatabaseSeed } = await import('./db/seed.js');
+            await runSchemaMigration();
+            await runDatabaseSeed();
+            console.log('[Auto-Migrate] Database successfully initialized with tables and demo data.');
+          } else {
+            console.log('[Auto-Migrate] Existing database schema detected. Ready.');
+          }
+        } catch (migrateErr: any) {
+          console.error('[Auto-Migrate Warning] Database auto-migration notice:', migrateErr.message);
+        }
+      }
+      return;
+    }
+
+    if (attempt < retries) {
+      console.warn(`[PostgreSQL] Connection attempt ${attempt}/${retries} failed. Retrying in ${delayMs / 1000}s...`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  console.warn('[PostgreSQL Warning] Could not connect to database after all retries. API running in degraded mode.');
+}
+
 async function bootstrap() {
   console.log('====================================================');
   console.log('  EquipSure - Biomedical Equipment Management System');
   console.log('====================================================');
 
-  const dbOk = await testDbConnection();
-  if (!dbOk) {
-    console.warn('[Warning] PostgreSQL connection failed at bootstrap. Verify connection parameters.');
-  } else if (process.env.AUTO_MIGRATE === 'true' || process.env.AUTO_INIT_DB === 'true') {
-    try {
-      const { pool } = await import('./config/db.js');
-      const checkTable = await pool.query(
-        "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'equipment');"
-      );
-      if (!checkTable.rows[0]?.exists) {
-        console.log('[Auto-Migrate] Blank database detected. Running schema & seed migrations...');
-        const { runSchemaMigration } = await import('./db/init.js');
-        const { runDatabaseSeed } = await import('./db/seed.js');
-        await runSchemaMigration();
-        await runDatabaseSeed();
-        console.log('[Auto-Migrate] Database successfully initialized with tables and demo data.');
-      } else {
-        console.log('[Auto-Migrate] Existing database schema detected. Ready.');
-      }
-    } catch (migrateErr: any) {
-      console.error('[Auto-Migrate Warning] Database auto-migration notice:', migrateErr.message);
-    }
-  }
-
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] EquipSure REST API running on http://localhost:${PORT}`);
-    console.log(`[Server] Healthcheck: http://localhost:${PORT}/api/system/status`);
+    console.log(`[Server] EquipSure REST API running on http://0.0.0.0:${PORT}`);
+    console.log(`[Server] Healthcheck: http://0.0.0.0:${PORT}/api/system/status`);
     console.log('====================================================');
   });
+
+  // Run DB check & migration asynchronously
+  initDatabaseWithRetry();
 }
 
 bootstrap();

@@ -4,7 +4,7 @@
   "description": "EquipSure - Biomedical Equipment Management System API",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"const fs = require('fs'); fs.mkdirSync('dist/db', { recursive: true }); fs.copyFileSync('src/db/schema.sql', 'dist/db/schema.sql'); fs.copyFileSync('src/db/seed.sql', 'dist/db/seed.sql');\"",
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "db:init": "tsx src/db/init.ts",
@@ -22,7 +22,9 @@
     "ioredis": "^5.4.2",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -31,8 +33,6 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.13.9",
-    "@types/pg": "^8.11.11",
-    "tsx": "^4.19.3",
-    "typescript": "^5.8.2"
+    "@types/pg": "^8.11.11"
   }
 }

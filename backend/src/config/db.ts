@@ -7,16 +7,18 @@ const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 const isProduction = process.env.NODE_ENV === 'production';
+const isInternalRender = Boolean(connectionString && connectionString.includes('dpg-') && !connectionString.includes('.render.com'));
+const useSsl = Boolean(
+  process.env.PGSSL === 'true' ||
+  (connectionString && connectionString.includes('sslmode=require')) ||
+  (isProduction && !isInternalRender && connectionString && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1'))
+);
 
 export const pool = new Pool(
   connectionString
     ? {
         connectionString,
-        ssl:
-          process.env.PGSSL === 'true' ||
-          (isProduction && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1'))
-            ? { rejectUnauthorized: false }
-            : false,
+        ssl: useSsl ? { rejectUnauthorized: false } : false,
         max: 20,
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 10000,

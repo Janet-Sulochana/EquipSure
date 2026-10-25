@@ -6,7 +6,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/system/status
     envVars:
@@ -30,7 +30,7 @@ services:
     name: equipsure-web
     runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     staticPublishPath: ./dist
     routes:
       - type: rewrite
