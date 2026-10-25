@@ -130,7 +130,7 @@ export const LoginPage: React.FC = () => {
         window.location.reload();
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Error during staff registration.');
+      setError(err.response?.data?.message || err.message || 'Error during staff registration.');
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,12 @@
 import axios from 'axios';
 
 let rawBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim() || '';
+
+// If Render blueprint provided service name without domain (e.g. "equipsure-api")
+if (rawBaseUrl && !rawBaseUrl.includes('.') && !rawBaseUrl.includes('localhost') && !rawBaseUrl.startsWith('/')) {
+  rawBaseUrl = `${rawBaseUrl}.onrender.com`;
+}
+
 if (rawBaseUrl && !rawBaseUrl.startsWith('http://') && !rawBaseUrl.startsWith('https://') && !rawBaseUrl.startsWith('/')) {
   rawBaseUrl = `https://${rawBaseUrl}`;
 }

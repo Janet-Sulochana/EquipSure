@@ -38,10 +38,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: equipsure-api
-          property: host
+        value: https://equipsure-api.onrender.com
 
 databases:
   # 3. EquipSure Managed PostgreSQL Database
