@@ -21,21 +21,60 @@ export const LoginPage: React.FC = () => {
   const [regEmail, setRegEmail] = useState<string>('');
   const [regPassword, setRegPassword] = useState<string>('');
   const [regRole, setRegRole] = useState<string>('hospital_staff');
-  const [regDept, setRegDept] = useState<string>('');
+  const [regDept, setRegDept] = useState<string>('Intensive Care Unit (ICU)');
+  const [isCustomDept, setIsCustomDept] = useState<boolean>(false);
+  const [customDept, setCustomDept] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentList, setDepartmentList] = useState<string[]>([
+    'Intensive Care Unit (ICU)',
+    'Emergency Medicine & Trauma',
+    'Diagnostic Radiology & Imaging',
+    'Cardiology & Cath Lab',
+    'Surgical Services (OR)',
+    'Nephrology & Dialysis',
+    'Clinical Pathology & Laboratory',
+    'Neonatal Intensive Care (NICU)',
+    'Central Sterile Supply Dept (CSSD)',
+    'Clinical Engineering',
+    'Biomedical Administration',
+    'Pediatrics & Maternity',
+    'Oncology & Radiation',
+    'General Medicine & OPD',
+  ]);
   const [showTestAccounts, setShowTestAccounts] = useState<boolean>(false);
 
   useEffect(() => {
     api.get('/departments').then((res) => {
-      if (res.data.success) {
-        setDepartments(res.data.data);
-        if (res.data.data.length > 0) {
-          setRegDept(res.data.data[0].name);
+      if (res.data?.success && Array.isArray(res.data.data)) {
+        const fetchedNames: string[] = res.data.data.map((d: any) => d.name).filter(Boolean);
+        if (fetchedNames.length > 0) {
+          setDepartmentList((prev) => Array.from(new Set([...fetchedNames, ...prev])));
         }
       }
     }).catch(() => {});
   }, []);
+
+  const handleRoleChange = (newRole: string) => {
+    setRegRole(newRole);
+    if (!isCustomDept) {
+      if (newRole === 'biomedical_engineer') {
+        setRegDept('Clinical Engineering');
+      } else if (newRole === 'admin') {
+        setRegDept('Biomedical Administration');
+      } else if (regDept === 'Clinical Engineering' || regDept === 'Biomedical Administration') {
+        setRegDept('Intensive Care Unit (ICU)');
+      }
+    }
+  };
+
+  const handleDeptSelect = (value: string) => {
+    if (value === '__custom__') {
+      setIsCustomDept(true);
+    } else {
+      setIsCustomDept(false);
+      setRegDept(value);
+    }
+  };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +106,20 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    const finalDepartment = isCustomDept ? customDept.trim() : regDept.trim();
+    if (!finalDepartment) {
+      setError('Please select or specify your assigned hospital department.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await api.post('/auth/register', {
         name: regName,
         email: regEmail,
         password: regPassword,
         role: regRole,
-        department: regDept,
+        department: finalDepartment,
         phone: regPhone,
       });
 
@@ -267,13 +313,13 @@ export const LoginPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Role / Department Access *</label>
                     <select
                       value={regRole}
-                      onChange={(e) => setRegRole(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                      onChange={(e) => handleRoleChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 bg-white"
                     >
                       <option value="hospital_staff">Clinical Staff (Doctor / Nurse)</option>
                       <option value="biomedical_engineer">Biomedical Engineer</option>
@@ -284,17 +330,33 @@ export const LoginPage: React.FC = () => {
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">Assigned Department *</label>
                     <select
-                      required
-                      value={regDept}
-                      onChange={(e) => setRegDept(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500"
+                      required={!isCustomDept}
+                      value={isCustomDept ? '__custom__' : regDept}
+                      onChange={(e) => handleDeptSelect(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-teal-500 bg-white"
                     >
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.name}>{d.name}</option>
+                      {departmentList.map((d) => (
+                        <option key={d} value={d}>{d}</option>
                       ))}
+                      <option value="__custom__">+ Other / Enter Custom Department...</option>
                     </select>
                   </div>
                 </div>
+
+                {isCustomDept && (
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Specify Custom Department / Unit *</label>
+                    <input
+                      type="text"
+                      required
+                      autoFocus
+                      value={customDept}
+                      onChange={(e) => setCustomDept(e.target.value)}
+                      placeholder="e.g. Pediatric Intensive Care, Outpatient Clinic, etc."
+                      className="w-full px-3 py-2 rounded-xl border border-teal-300 ring-2 ring-teal-500/10 text-xs focus:outline-none focus:border-teal-500"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Direct Contact Phone / Ext</label>
